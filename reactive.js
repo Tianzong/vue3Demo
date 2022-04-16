@@ -3,10 +3,15 @@ const budget = new WeakMap()
 // 当前副作用函数
 let activeEffect
 
-// 注册副作用函数
+// 注册副作用函数, 设fn修改了响应式对象obj
 function effect(fn) {
-  activeEffect = fn
-  fn()
+  const effectFn = () => {
+    cleanup(effectFn)
+    activeEffect = effectFn
+    fn()
+  }
+  effectFn.deps = []
+  effectFn()
 }
 
 // 转换为响应式
@@ -38,9 +43,11 @@ function track(target, key) {
 
   let deps = depMap.get(key)
   if (!deps) {
-    depMap.set(target, (depMap = new Set()))
+    depMap.set(key, (deps = new Set()))
   }
   deps.add(activeEffect)
+  // 与副作用函数存在联系的依赖集合
+  activeEffect.deps.push(deps)
 }
 
 // 派发更新
@@ -53,3 +60,29 @@ function trigger(target, key) {
 
   effects && effects.forEach(effect =>  effect())
 }
+
+// 双向删除该副作用函数的依赖关系
+function cleanup(effectFn) {
+  for (let i = 0; i < effectFn.length; i++) {
+    const deps = effectFn.deps[i]
+    deps.delete(effectFn)
+  }
+  effectFn.deps.length = 0
+}
+
+// 测试代码
+let obj = {
+  name: 'tys'
+}
+const objReactive = reactive(obj)
+
+
+function effectFun () {
+  console.log(objReactive.name)
+}
+
+effect(effectFun)
+
+objReactive.name = 'nihao'
+objReactive.name = 'world'
+
