@@ -2,13 +2,19 @@ const budget = new WeakMap()
 
 // 当前副作用函数
 let activeEffect
+// 副作用函数栈， effect 嵌套的时候，栈顶始终为当前执行的effect函数
+const effectStack = []
 
 // 注册副作用函数, 设fn修改了响应式对象obj
 function effect(fn) {
   const effectFn = () => {
     cleanup(effectFn)
     activeEffect = effectFn
+    effectStack.push(activeEffect)
     fn()
+    // 执行完毕后弹出
+    effectStack.pop()
+    activeEffect = effectStack[effectStack.length - 1]
   }
   effectFn.deps = []
   effectFn()
@@ -72,17 +78,19 @@ function cleanup(effectFn) {
 
 // 测试代码
 let obj = {
-  name: 'tys'
+  name: 'tys',
+  age: 20
 }
 const objReactive = reactive(obj)
 
 
-function effectFun () {
-  console.log(objReactive.name)
-}
+effect(function effectFun1(){
 
-effect(effectFun)
+  effect(function effectFn2() {
+    console.log('effect2 执行', objReactive.age)
+  })
 
-objReactive.name = 'nihao'
+  console.log('effect1 执行', objReactive.name)
+})
+
 objReactive.name = 'world'
-
