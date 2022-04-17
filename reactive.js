@@ -64,7 +64,16 @@ function trigger(target, key) {
   }
   const effects = depMap.get(key)
 
-  effects && effects.forEach(effect =>  effect())
+  // 避免无限执行 ？？ 不大懂
+  const effectsToRun = new Set(effects)
+
+  effectsToRun && effectsToRun.forEach(effectFn =>  () => {
+    // 如果trigger触发的函数是当前effect函数则不执行
+    if (effectFn !== activeEffect) {
+      effectsToRun.add(effectFn)
+    }
+  })
+  effectsToRun.forEach(effectFn => effectFn())
 }
 
 // 双向删除该副作用函数的依赖关系
