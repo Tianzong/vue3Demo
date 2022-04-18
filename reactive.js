@@ -11,10 +11,11 @@ function effect(fn, options = {}) {
     cleanup(effectFn)
     activeEffect = effectFn
     effectStack.push(activeEffect)
-    fn()
+    const res = fn()
     // 执行完毕后弹出
     effectStack.pop()
     activeEffect = effectStack[effectStack.length - 1]
+    return res
   }
   effectFn.deps = []
   effectFn.options = options
@@ -24,6 +25,20 @@ function effect(fn, options = {}) {
   }
   // lazy 将副作用函数返回
   return effectFn
+}
+
+function computed(getter) {
+  const effectFn = effect(getter, {
+    lazy: true
+  })
+
+  const obj = {
+    get value() {
+      return effectFn()
+    }
+  }
+
+  return obj
 }
 
 // 转换为响应式
@@ -105,14 +120,7 @@ let obj = {
 }
 const objReactive = reactive(obj)
 
+const intro = computed(() => objReactive.name + objReactive.age)
+console.log(intro.value)
 
-effect(function effectFun1(){
 
-  effect(function effectFn2() {
-    console.log('effect2 执行', objReactive.age)
-  })
-
-  console.log('effect1 执行', objReactive.name)
-})
-
-objReactive.name = 'world'
