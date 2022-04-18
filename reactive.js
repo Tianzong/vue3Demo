@@ -18,7 +18,12 @@ function effect(fn, options = {}) {
   }
   effectFn.deps = []
   effectFn.options = options
-  effectFn()
+  // 当非lazy的时候才执行，
+  if (!options.lazy) {
+    effectFn()
+  }
+  // lazy 将副作用函数返回
+  return effectFn
 }
 
 // 转换为响应式
