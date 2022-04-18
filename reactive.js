@@ -28,13 +28,30 @@ function effect(fn, options = {}) {
 }
 
 function computed(getter) {
+  // 上一次的 缓存值
+  let value
+  // dirty 用于判断是否需要重新计算
+  let dirty = true
+
   const effectFn = effect(getter, {
-    lazy: true
+    lazy: true,
+    scheduler() {
+      // 当值变化的时候，重新标记为脏数据
+      dirty = true
+      // 这个值变化得时候，强制触发
+      trigger(obj, 'value')
+    }
   })
 
   const obj = {
     get value() {
-      return effectFn()
+      if (dirty) {
+        value = effectFn()
+        dirty = false
+      }
+      // 当读取value时， 手动调用track 函数进行追踪 将用到这个computed的effect进行追踪
+      track(obj,'value')
+      return value
     }
   }
 
@@ -119,8 +136,14 @@ let obj = {
   age: 20
 }
 const objReactive = reactive(obj)
-
 const intro = computed(() => objReactive.name + objReactive.age)
+
+effect(() => {
+  console.log(intro.value)
+})
+
 console.log(intro.value)
+// obj.foo 修改
+objReactive.age++
 
 
