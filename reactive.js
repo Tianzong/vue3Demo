@@ -6,7 +6,7 @@ let activeEffect
 const effectStack = []
 
 // 注册副作用函数, 设fn修改了响应式对象obj
-function effect(fn) {
+function effect(fn, options = {}) {
   const effectFn = () => {
     cleanup(effectFn)
     activeEffect = effectFn
@@ -17,6 +17,7 @@ function effect(fn) {
     activeEffect = effectStack[effectStack.length - 1]
   }
   effectFn.deps = []
+  effectFn.options = options
   effectFn()
 }
 
@@ -73,7 +74,14 @@ function trigger(target, key) {
       effectsToRun.add(effectFn)
     }
   })
-  effectsToRun.forEach(effectFn => effectFn())
+  effectsToRun.forEach(effectFn => {
+    // 如果该副作用函数 存在调度器 则调用该调度器，并且将该副作用函数作为参数传入
+    if (effectFn.options.scheduler) {
+      effectFn.options.scheduler(effectFn)
+    } else {
+      effectFn()
+    }
+  })
 }
 
 // 双向删除该副作用函数的依赖关系
