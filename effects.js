@@ -113,7 +113,7 @@ function trigger(target, key, type) {
     }
   })
   // 设置属性也会影响 for in 操作
-  if (type === 'ADD') {
+  if (type === 'ADD' || type === 'DELETE') {
     // 取得与 ITERATE_KEY有关的副作用函数
     const iterateEffects = depMap.get(ITERATE_KEY)
 

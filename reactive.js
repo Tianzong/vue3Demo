@@ -31,6 +31,18 @@ function reactive(obj) {
       trigger(target, key, type)
 
       return res
+    },
+
+    // 删除操作
+    deleteProperty(target, key) {
+      const hadKey = Object.prototype.hasOwnProperty.call(target, key)
+      const res = Reflect.deleteProperty(target, key)
+
+      if (res && hadKey) {
+        trigger(target, key, 'DELETE')
+      }
+
+      return res
     }
   })
 }
