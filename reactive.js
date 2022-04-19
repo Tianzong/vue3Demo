@@ -20,6 +20,14 @@ function reactive(obj) {
     ownKeys(target) {
       track(target, ITERATE_KEY)
       return Reflect.ownKeys(target)
+    },
+
+    // 读操作
+    set(target, key, value, receiver) {
+      const res = Reflect.set(target, key, receiver)
+      trigger(target, key)
+
+      return res
     }
   })
 }

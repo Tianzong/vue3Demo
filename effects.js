@@ -101,16 +101,24 @@ function trigger(target, key) {
     return
   }
   const effects = depMap.get(key)
+  // 取得与 ITERATE_KEY有关的副作用函数
+  const iterateEffects = depMap.get(ITERATE_KEY)
 
   // 避免无限执行 ？？ 不大懂
-  const effectsToRun = new Set(effects)
+  const effectsToRun = new Set()
 
+  // 与 key 相关联的副作用函数
   effectsToRun && effectsToRun.forEach(effectFn =>  () => {
     // 如果trigger触发的函数是当前effect函数则不执行
     if (effectFn !== activeEffect) {
       effectsToRun.add(effectFn)
     }
   })
+  // 设置属性也会影响 for in 操作
+  iterateEffects && iterateEffects.forEach(effectFn => {
+    effectsToRun.add(effectFn)
+  })
+
   effectsToRun.forEach(effectFn => {
     // 如果该副作用函数 存在调度器 则调用该调度器，并且将该副作用函数作为参数传入
     if (effectFn.options.scheduler) {
