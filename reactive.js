@@ -1,7 +1,9 @@
 
-const ITERATE_KEY = Symbol()
+import { track, trigger } from "./effects.js"
 
-function reactive(obj) {
+export const ITERATE_KEY = Symbol()
+
+export function reactive(obj) {
   return new Proxy(obj, {
     // 代理读操作
     get(target, key, receiver) {
@@ -11,7 +13,6 @@ function reactive(obj) {
 
     // 代理in操作
     has(target, key) {
-      console.log(track())
       track(target, key)
       return Reflect.has(target, key)
     },
@@ -23,12 +24,17 @@ function reactive(obj) {
     },
 
     // 读操作
-    set(target, key, value, receiver) {
+    set(target, key, newVal, receiver) {
+      const oldVal = target[key]
+
       // 如果属性不存在，说明是在添加新的属性，否则是设置已有属性
       const type = Object.prototype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
 
-      const res = Reflect.set(target, key, receiver)
-      trigger(target, key, type)
+      const res = Reflect.set(target, key, newVal, receiver)
+      // 考虑NAN. 当不全等的情况下下，抱枕都不是NAN
+      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
+        trigger(target, key, type)
+      }
 
       return res
     },

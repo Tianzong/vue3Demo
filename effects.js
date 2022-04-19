@@ -1,4 +1,6 @@
-const budget = new WeakMap()
+import { ITERATE_KEY } from "./reactive.js";
+
+export const budget = new WeakMap()
 
 // 当前副作用函数
 let activeEffect
@@ -6,7 +8,7 @@ let activeEffect
 const effectStack = []
 
 // 注册副作用函数, 设fn修改了响应式对象obj
-function effects(fn, options = {}) {
+export function effects(fn, options = {}) {
   const effectFn = () => {
     cleanup(effectFn)
     activeEffect = effectFn
@@ -27,7 +29,7 @@ function effects(fn, options = {}) {
   return effectFn
 }
 
-function computed(getter) {
+export function computed(getter) {
   // 上一次的 缓存值
   let value
   // dirty 用于判断是否需要重新计算
@@ -58,29 +60,11 @@ function computed(getter) {
   return obj
 }
 
-// 转换为响应式
-function effect(data) {
-  const obj = new Proxy(data, {
-    get(target, key) {
-
-      track(target, key)
-
-      return target[key]
-    },
-
-    set(target, key, newVal) {
-      target[key] = newVal
-      trigger(target, key)
-    }
-  })
-  return obj
-}
-
 // 追踪函数变化
-function track(target, key) {
+export function track(target, key) {
   if (!activeEffect) return
 
-  let depMap = budget.get(key)
+  let depMap = budget.get(target)
   if (!depMap) {
     budget.set(target, (depMap = new Map()))
   }
@@ -95,18 +79,19 @@ function track(target, key) {
 }
 
 // 派发更新
-function trigger(target, key, type) {
+export function trigger(target, key, type) {
   const depMap = budget.get(target)
   if (!depMap) {
     return
   }
+
   const effects = depMap.get(key)
 
   // 避免无限执行 ？？ 不大懂
   const effectsToRun = new Set()
 
   // 与 key 相关联的副作用函数
-  effectsToRun && effectsToRun.forEach(effectFn =>  () => {
+  effects && effects.forEach(effectFn => {
     // 如果trigger触发的函数是当前effect函数则不执行. 避免无限执行
     if (effectFn !== activeEffect) {
       effectsToRun.add(effectFn)
@@ -123,7 +108,6 @@ function trigger(target, key, type) {
       }
     })
   }
-
 
   effectsToRun.forEach(effectFn => {
     // 如果该副作用函数 存在调度器 则调用该调度器，并且将该副作用函数作为参数传入
@@ -144,20 +128,6 @@ function cleanup(effectFn) {
   effectFn.deps.length = 0
 }
 
-// 测试代码
-let obj = {
-  name: 'tys',
-  age: 20
-}
-const objReactive = effect(obj)
-const intro = computed(() => objReactive.name + objReactive.age)
 
-effect(() => {
-  console.log(intro.value)
-})
-
-console.log(intro.value)
-// obj.foo 修改
-objReactive.age++
 
 

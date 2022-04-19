@@ -1,0 +1,20 @@
+{
+  "name": "vue3demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "effects.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tianzong/vue3Demo.git"
+  },
+  "author": "tianyongsheng",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Tianzong/vue3Demo/issues"
+  },
+  "homepage": "https://github.com/Tianzong/vue3Demo#readme"
+}
