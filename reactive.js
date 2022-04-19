@@ -24,8 +24,11 @@ function reactive(obj) {
 
     // 读操作
     set(target, key, value, receiver) {
+      // 如果属性不存在，说明是在添加新的属性，否则是设置已有属性
+      const type = Object.prototype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+
       const res = Reflect.set(target, key, receiver)
-      trigger(target, key)
+      trigger(target, key, type)
 
       return res
     }
