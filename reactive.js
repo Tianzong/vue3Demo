@@ -3,12 +3,25 @@ import { track, trigger } from "./effects.js"
 
 export const ITERATE_KEY = Symbol()
 
-export function reactive(obj) {
+export function reactive(obj, isShallow = false) {
   return new Proxy(obj, {
     // 代理读操作
     get(target, key, receiver) {
+
+      // 递归代理
+      // 得到原始值结果
       track(target, key)
-      return Reflect.get(target, key, receiver)
+
+      const res = Reflect.get(target, key, receiver)
+
+      // 如果是浅响应 直接返回
+      if (isShallow) return res
+
+      if (typeof res === 'object' && res !== null) {
+        // 懒代理， 用到的时候再代理
+        return reactive(res)
+      }
+      return res
     },
 
     // 代理in操作
