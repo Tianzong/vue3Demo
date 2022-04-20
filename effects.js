@@ -79,7 +79,7 @@ export function track(target, key) {
 }
 
 // 派发更新
-export function trigger(target, key, type) {
+export function trigger(target, key, type, newVal) {
   const depMap = budget.get(target)
   if (!depMap) {
     return
@@ -97,7 +97,8 @@ export function trigger(target, key, type) {
       effectsToRun.add(effectFn)
     }
   })
-  // 设置属性也会影响 for in 操作
+
+  // 与 属性枚举。 设置属性也会影响 for in 操作
   if (type === 'ADD' || type === 'DELETE') {
     // 取得与 ITERATE_KEY有关的副作用函数
     const iterateEffects = depMap.get(ITERATE_KEY)
@@ -109,6 +110,31 @@ export function trigger(target, key, type) {
     })
   }
 
+  // 当操作类型是 ADD 并且目标是数组的情况下， 取出与length属性有关的effect
+  if (type === 'ADD' && Array.isArray(target)) {
+    const lengthEffects = depMap.get('length')
+
+    lengthEffects && lengthEffects.forEach(effectFn => {
+      if (effectFn !== activeEffect) {
+        effectsToRun.add(effectFn)
+      }
+    })
+  }
+
+  // 当目标是数组，并且修改了 length. 需要将 key 大于等于 length的回调执行，因为他们现在是没有意义的值了
+  if (Array.isArray(target) && key === 'length') {
+    depMap.forEach((effects, key) => {
+      if (key >= newVal) {
+        effects.forEach(effectFn => {
+          if (effectFn !== activeEffect) {
+            effectsToRun.add(effectFn)
+          }
+        })
+      }
+    })
+  }
+
+  // 执行副作用函数
   effectsToRun.forEach(effectFn => {
     // 如果该副作用函数 存在调度器 则调用该调度器，并且将该副作用函数作为参数传入
     if (effectFn.options.scheduler) {

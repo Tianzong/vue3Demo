@@ -2,21 +2,14 @@
 import { reactive } from "./reactive.js"
 import {computed, effects, budget} from "./effects.js"
 
-function testLog(i) {
-  if (i <= 1) {
-    console.log(`--------------测试用例${i}--------------`)
-  } else {
-    console.log(`\n\n--------------测试用例${i}--------------`)
-  }
-}
-
 // 测试代码
 let obj = {
   name: 'tys',
   age: 20
 }
+const arr = ['foo']
 const objReactive = reactive(obj)
-
+const arrReactive = reactive(arr)
 /**
  * 1. 基本响应式
  *
@@ -28,8 +21,6 @@ const objReactive = reactive(obj)
  * 今年22, 我叫tys，
  * 今年22, 我叫哈哈
  * */
-// testLog(1)
-//
 // effects(() => {
 //   console.log(`今年${objReactive.age}, 我叫${objReactive.name}，`)
 // })
@@ -51,8 +42,6 @@ const objReactive = reactive(obj)
  * effectFn1 执行
  * effectFn2 执行
  * */
-// testLog(1)
-//
 // let temp1, temp2
 // effects(function effectFn1() {
 //   console.log('effectFn1 执行')
@@ -103,9 +92,30 @@ const objReactive = reactive(obj)
 /**
  * 5. for in 拦截
  * */
+// effects(() => {
+//   console.log('name' in objReactive)
+//   console.log('for in 拦截')
+// })
+//
+// objReactive.add = 'new add'
+
+/**
+ * 5. 数组 length
+ *
+ * 预期：
+ * foo
+ * undefined
+ * 0
+ * 4
+ * */
 effects(() => {
-  console.log('name' in objReactive)
-  console.log('for in 拦截')
+  console.log(arrReactive[0])
 })
 
-objReactive.add = 'new add'
+arrReactive.length = 0
+
+effects(() => {
+  console.log(arrReactive.length)
+})
+
+arrReactive[3] = 'bar'

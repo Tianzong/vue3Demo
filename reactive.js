@@ -24,6 +24,25 @@ export function reactive(obj, isShallow = false) {
       return res
     },
 
+    // 读操作
+    set(target, key, newVal, receiver) {
+      const oldVal = target[key]
+
+      // 如果属性不存在，说明是在添加新的属性，否则是设置已有属性
+      const type = Array.isArray(target)
+          // 如果代理目标是 数组 设置的 下标（key）如果比原始长度大， 说明是新增，length变化
+          ? (Number(key) < target.length ? 'SET' : 'ADD')
+          : Object.prototype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
+
+      const res = Reflect.set(target, key, newVal, receiver)
+      // 考虑NAN. 当不全等的情况下下，抱枕都不是NAN
+      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
+        trigger(target, key, type, newVal)
+      }
+
+      return res
+    },
+
     // 代理in操作
     has(target, key) {
       track(target, key)
@@ -32,24 +51,8 @@ export function reactive(obj, isShallow = false) {
 
     // 代理 for in 操作符
     ownKeys(target) {
-      track(target, ITERATE_KEY)
+      track(target, Array.isArray ? 'length': ITERATE_KEY)
       return Reflect.ownKeys(target)
-    },
-
-    // 读操作
-    set(target, key, newVal, receiver) {
-      const oldVal = target[key]
-
-      // 如果属性不存在，说明是在添加新的属性，否则是设置已有属性
-      const type = Object.prototype.hasOwnProperty.call(target, key) ? 'SET' : 'ADD'
-
-      const res = Reflect.set(target, key, newVal, receiver)
-      // 考虑NAN. 当不全等的情况下下，抱枕都不是NAN
-      if (oldVal !== newVal && (oldVal === oldVal || newVal === newVal)) {
-        trigger(target, key, type)
-      }
-
-      return res
     },
 
     // 删除操作
