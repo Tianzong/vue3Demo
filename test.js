@@ -108,14 +108,22 @@ const arrReactive = reactive(arr)
  * 0
  * 4
  * */
+// effects(() => {
+//   console.log(arrReactive[0])
+// })
+//
+// arrReactive.length = 0
+//
+// effects(() => {
+//   console.log(arrReactive.length)
+// })
+//
+// arrReactive[3] = 'bar'
+
 effects(() => {
-  console.log(arrReactive[0])
+  for (const val of arrReactive) {
+    console.log(val)
+  }
 })
 
-arrReactive.length = 0
-
-effects(() => {
-  console.log(arrReactive.length)
-})
-
-arrReactive[3] = 'bar'
+arrReactive[1] = 'bar'
