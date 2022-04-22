@@ -30,14 +30,22 @@ function createRenderer(options) {
     } else {
       if (container._vnode) {
         // 旧的存在，新的不存在，说明是卸载
-        container.innerHTML = ''
+        unmount(vnode)
       }
     }
     // 旧的vnode缓存
     container._vnode = vnode
   }
 
-  export function patch(n1, n2, container) {
+  // 封装卸载操作。可用于钩子函数的监听
+  function unmount(vnode) {
+    const parent = vnode.el.parentNode
+    if (parent) {
+      parent.removeChild(vnode.el)
+    }
+  }
+
+  function patch(n1, n2, container) {
     if (!n1) {
       mountElement(n2, container)
     } else {
@@ -60,31 +68,34 @@ function createRenderer(options) {
 
     if (vnode.props) {
       for (const key in vnode.props) {
-        // class 做特殊处理。不管是对象，数组，还是字符串统一处理成字符串
-        if (key === 'class') {
-          // 暂时省略
-          // normalizeClass()
-        }
-
-        // 用 in 操作符判断 key 是否存在对应的DOM property
-        if (key in el) {
-          const type = typeof el[key]
-          const value = vnode.props[key]
-          // 布尔类型，且value 为空，变为false。 参照disable
-          if (type === 'boolean' && value === '') {
-            el[key] = true
-          } else {
-            el[key] = value
-          }
-        } else{
-          // 如果要设置的属性没有对应的 Dom properties。 如 class -> className，直接调用setAttribute。这里并不健全，直接用的原有的名字 class -> class
-          el.setAttribute(key, vnode.props[key])
-        }
+        patchProps(el, key, null, vnode.props[key])
       }
     }
 
     // 元素挂载到容器里
     insert(el, container)
+  }
+
+  function patchProps(el, key, prevValue, nextValue) {
+    // class 做特殊处理。不管是对象，数组，还是字符串统一处理成字符串
+    if (key === 'class') {
+      // 暂时省略
+      // normalizeClass()
+    }
+
+    // 用 in 操作符判断 key 是否存在对应的DOM property
+    if (key in el) {
+      const type = typeof el[key]
+      // 布尔类型，且value 为空，变为false。 参照disable
+      if (type === 'boolean' && nextValue === '') {
+        el[key] = true
+      } else {
+        el[key] = nextValue
+      }
+    } else{
+      // 如果要设置的属性没有对应的 Dom properties。 如 class -> className，直接调用setAttribute。这里并不健全，直接用的原有的名字 class -> class
+      el.setAttribute(key, nextValue)
+    }
   }
 
   return {
