@@ -39,14 +39,42 @@ function createRenderer(options) {
 
   export function patch(n1, n2, container) {
     if (!n1) {
+      mountElement(n2, container)
+    } else {
+      //
     }
   }
 
   function mountElement(vnode, container) {
     const el = createElement(vnode.type)
-    // 文本节点
+
+    // 孩子节点处理
     if (typeof vnode.children === 'string') {
       setElementText(el, vnode.children)
+    } else if (Array.isArray(vnode)) {
+      vnode.children.forEach(child => {
+        // 挂载阶段，没有旧vnode
+        patch(null, child, el)
+      })
+    }
+
+    if (vnode.props) {
+      for (const key in vnode.props) {
+        // 用 in 操作符判断 key 是否存在对应的DOM property
+        if (key in el) {
+          const type = typeof el[key]
+          const value = vnode.props[key]
+          // 布尔类型，且value 为空，变为false。 参照disable
+          if (type === 'boolean' && value === '') {
+            el[key] = true
+          } else {
+            el[key] = value
+          }
+        } else{
+          // 如果要设置的属性没有对应的 Dom properties。 如 class -> className，直接调用setAttribute。这里并不健全，直接用的原有的名字 class -> class
+          el.setAttribute(key, vnode.props[key])
+        }
+      }
     }
 
     // 元素挂载到容器里
