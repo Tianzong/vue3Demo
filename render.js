@@ -60,6 +60,12 @@ function createRenderer(options) {
 
     if (vnode.props) {
       for (const key in vnode.props) {
+        // class 做特殊处理。不管是对象，数组，还是字符串统一处理成字符串
+        if (key === 'class') {
+          // 暂时省略
+          // normalizeClass()
+        }
+
         // 用 in 操作符判断 key 是否存在对应的DOM property
         if (key in el) {
           const type = typeof el[key]
