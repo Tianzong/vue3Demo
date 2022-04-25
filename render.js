@@ -46,11 +46,32 @@ function createRenderer(options) {
   }
 
   function patch(n1, n2, container) {
+    // 不同类型，先卸载旧的
+    if (n1 && n1.type !== n2.type) {
+      unmount(n1)
+      n1 = null
+    }
+    
+    const { type } = n2
+    
+    // string 代表普通标签
+    if (typeof type === 'string') {
+      if (!n1) {
+        mountElement(n2, container)
+      } else {
+        patchElement(n1, n2)
+      }
+    }
+
     if (!n1) {
       mountElement(n2, container)
     } else {
       //
     }
+  }
+  
+  function patchElement() {
+    
   }
 
   function mountElement(vnode, container) {
@@ -77,25 +98,41 @@ function createRenderer(options) {
   }
 
   function patchProps(el, key, prevValue, nextValue) {
-    // class 做特殊处理。不管是对象，数组，还是字符串统一处理成字符串
-    if (key === 'class') {
+    // 如果是事件监听器
+    if (/^on/.test(key)) {
+      const name = key.slice(2).toLowerCase()
+      // 移除旧的事件处理函数
+      prevValue && el.removeEventListener(name, prevValue)
+      el.addEventListener(name, nextValue)
+    } else if (key === 'class') {
       // 暂时省略
+      // class 做特殊处理。不管是对象，数组，还是字符串统一处理成字符串  --> "class1 class2"
       // normalizeClass()
-    }
-
-    // 用 in 操作符判断 key 是否存在对应的DOM property
-    if (key in el) {
-      const type = typeof el[key]
-      // 布尔类型，且value 为空，变为false。 参照disable
-      if (type === 'boolean' && nextValue === '') {
-        el[key] = true
-      } else {
-        el[key] = nextValue
+    } else if (shouldSetAsProps(el, key, nextValue)) {
+      // 用 in 操作符判断 key 是否存在对应的DOM property
+      if (key in el) {
+        const type = typeof el[key]
+        // 布尔类型，且value 为空，变为false。 参照disable
+        if (type === 'boolean' && nextValue === '') {
+          el[key] = true
+        } else {
+          el[key] = nextValue
+        }
+      } else{
+        // 如果要设置的属性没有对应的 Dom properties。 如 class -> className，直接调用setAttribute。这里并不健全，直接用的原有的名字 class -> class
+        el.setAttribute(key, nextValue)
       }
-    } else{
-      // 如果要设置的属性没有对应的 Dom properties。 如 class -> className，直接调用setAttribute。这里并不健全，直接用的原有的名字 class -> class
-      el.setAttribute(key, nextValue)
+    } else {
+      // 省略
     }
+  }
+
+  // 是否支持设置props。
+  function shouldSetAsProps(el, key, value) {
+    // 特殊处理
+    if (key === 'form' && el.tagName === 'INPUT') return false
+
+    return key in el
   }
 
   return {
