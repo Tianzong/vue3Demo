@@ -10,8 +10,8 @@ const options = {
     el.textContent = text
   },
   // 插入元素
-  insert(el, container) {
-    container.appendChild(el)
+  insert(el, container, anchor) {
+    container.appendChild(el, anchor)
   }
 }
 
@@ -45,7 +45,7 @@ function createRenderer(options) {
     }
   }
 
-  function patch(n1, n2, container) {
+  function patch(n1, n2, container, anchor) {
     // 不同类型，先卸载旧的
     if (n1 && n1.type !== n2.type) {
       unmount(n1)
@@ -57,7 +57,7 @@ function createRenderer(options) {
     // string 代表普通标签
     if (typeof type === 'string') {
       if (!n1) {
-        mountElement(n2, container)
+        mountElement(n2, container, anchor)
       } else {
         patchElement(n1, n2)
       }
@@ -84,6 +84,7 @@ function createRenderer(options) {
 
   // 毕竟两个元素，更新
   function patchElement(n1, n2) {
+    // ??
     const el = n2.el = n1.el
     const oldProps = n1.props
     const newProps = n2.props
@@ -133,17 +134,49 @@ function createRenderer(options) {
       // 使用key 先patch可复用的节点
       for (let i = 0; i < newChildren.length; i++) {
         const newVNode = newChildren[i]
-        for (let j = 0; j < oldChildren.length; j++) {
-          const oldVNode = oldChildren[i]
-          if (newVNode.key === oldVNode.key) {
-            patch(oldVNode, newVNode, container)
-          }
-          if (j < lastIndex) {
-            // 如果当前找到的节点，在旧节点中得index小于最大索引值 说明他需要移动
+        let j = 0
+        // 是否找到了相同得key
+        let find = false
 
-          } else {
-            lastIndex = j
+        for (j; j < oldChildren.length; j++) {
+          const oldVNode = oldChildren[i]
+          const has = newChildren.find(vnode => vnode.key === oldVNode.key)
+
+          // 如果没找到一样的
+          if (!has) {
+            unmount(oldVNode)
           }
+
+          if (newVNode.key === oldVNode.key) {
+            find = true
+            patch(oldVNode, newVNode, container)
+            if (j < lastIndex) {
+              // 如果当前找到的节点，在旧节点中得index小于最大索引值 说明他需要移动
+              // 其实就是插入排序
+              const preVnode = newChildren[i - 1]
+              if (preVnode) {
+                const anchor = preVnode.el.nextSibling
+                insert(newVNode.el, container, anchor) // 插入到container里得anchor前
+              }
+            } else {
+              lastIndex = j
+            }
+            break
+          }
+        }
+        // find 为false
+        // 说明新增 直接插到新得上一个下面
+        if (!find) {
+          const prevVnode = newChildren[i - 1]
+          let anchor = null
+          if (prevVnode) {
+            // 用下一个兄弟做锚点
+            anchor = prevVnode.el.nextSibling
+          } else {
+            // 没有前一个直接插入到container第一个
+            anchor = container.firstChild
+          }
+          patch(null, newVNode, container, anchor)
         }
       }
 
@@ -163,7 +196,7 @@ function createRenderer(options) {
     }
   }
 
-  function mountElement(vnode, container) {
+  function mountElement(vnode, container, anchor) {
     const el = createElement(vnode.type)
 
     // 孩子节点处理
