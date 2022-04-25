@@ -117,15 +117,49 @@ function createRenderer(options) {
     } else if (Array.isArray(n2.children)) {
       // 新节点是一组子节点
 
-      // 判断旧的节点
-      // 1. 一组子节点
-      if (Array.isArray(n1.children)) {
-        // 核心diff算法
-      } else {
-        // 2. 其他
-        setElementText(container, '')
-        n2.children.forEach(c => patch(null, c, container))
+      const oldChildren = n1.children
+      const newChildren = n2.children
+
+      // 旧 长度
+      const oldLen = oldChildren.length
+      const newLen = newChildren.length
+
+      // 较短的长度
+      const commonLength = Math.min(oldLen, newLen)
+
+      // 当前找到的 key相同的 旧节点的ind最大值
+      let lastIndex = 0
+
+      // 使用key 先patch可复用的节点
+      for (let i = 0; i < newChildren.length; i++) {
+        const newVNode = newChildren[i]
+        for (let j = 0; j < oldChildren.length; j++) {
+          const oldVNode = oldChildren[i]
+          if (newVNode.key === oldVNode.key) {
+            patch(oldVNode, newVNode, container)
+          }
+          if (j < lastIndex) {
+            // 如果当前找到的节点，在旧节点中得index小于最大索引值 说明他需要移动
+
+          } else {
+            lastIndex = j
+          }
+        }
       }
+
+      /// 遍历接的节点。
+      for (let i = 0; i < commonLength; i++) {
+        patch(oldChildren[i], newChildren[i])
+      }
+
+      if (newLen > oldLen) {
+        for (let i = commonLength; i < newLen; i++) {
+          patch(null, newChildren[i], container)
+        }
+      } else {
+        unmount(oldChildren[i])
+      }
+
     }
   }
 
