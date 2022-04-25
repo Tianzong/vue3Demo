@@ -61,6 +61,18 @@ function createRenderer(options) {
       } else {
         patchElement(n1, n2)
       }
+    } else if (type === Text) {
+      // 文本类型
+      // 如果没有旧节点，直接挂载
+      if (!n1) {
+        const el = n2.el = document.createTextNode(n2.children)
+        insert(el, container)
+      } else {
+        const el = n2.el = n1.el
+        if (n1.children && n2.children) {
+          el.nodeValue = n2.children
+        }
+      }
     }
 
     if (!n1) {
@@ -69,9 +81,31 @@ function createRenderer(options) {
       //
     }
   }
-  
-  function patchElement() {
-    
+
+  // 毕竟两个元素，更新
+  function patchElement(n1, n2) {
+    const el = n2.el = n1.el
+    const oldProps = n1.props
+    const newProps = n2.props
+
+    // patch Props
+    for (const key in newProps) {
+      if (newProps[key] !== oldProps[key]) {
+        patchProps(el, key, oldProps[key], newProps[key])
+      }
+    }
+    for (const key in oldProps) {
+      if (!(key in newProps)) {
+        patchProps(el, key, oldProps[key], newProps[key])
+      }
+    }
+
+    // 更新children
+    patchChildren(n1, n2, el)
+  }
+
+  function patchChildren(n1, n2, container) {
+
   }
 
   function mountElement(vnode, container) {
