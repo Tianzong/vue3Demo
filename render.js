@@ -105,7 +105,28 @@ function createRenderer(options) {
   }
 
   function patchChildren(n1, n2, container) {
+    // 新节点是 文本标签
+    if (typeof n2.children === 'string') {
+      // 旧节点类型： 没有子节点，文本子节点，一组子节点
+      // 只有为一组(可能为1)子节点的时候才要卸载
+      if (Array.isArray(n1.children)) {
+        n1.children.forEach(c => unmount(c))
+      }
+      // 将新的设置到容器下面
+      setElementText(container, n2.children)
+    } else if (Array.isArray(n2.children)) {
+      // 新节点是一组子节点
 
+      // 判断旧的节点
+      // 1. 一组子节点
+      if (Array.isArray(n1.children)) {
+        // 核心diff算法
+      } else {
+        // 2. 其他
+        setElementText(container, '')
+        n2.children.forEach(c => patch(null, c, container))
+      }
+    }
   }
 
   function mountElement(vnode, container) {
