@@ -1,4 +1,5 @@
 import { patch } from "./patch.js";
+import { mountComponent } from './component.js'
 
 const options = {
   // 用于创建元素
@@ -61,6 +62,9 @@ function createRenderer(options) {
       } else {
         patchElement(n1, n2)
       }
+    } else if (type === 'object') {
+      // 组件类型
+      mountComponent()
     } else if (type === Text) {
       // 文本类型
       // 如果没有旧节点，直接挂载
@@ -129,6 +133,7 @@ function createRenderer(options) {
       const commonLength = Math.min(oldLen, newLen)
 
       // 当前找到的 key相同的 旧节点的ind最大值
+      // 依次遍历新的节点。 每次寻找相同旧节点的 index 如果小于该值。 直接放到上一个匹配到的旧节点的后面
       let lastIndex = 0
 
       // 使用key 先patch可复用的节点

@@ -120,10 +120,16 @@ const arrReactive = reactive(arr)
 //
 // arrReactive[3] = 'bar'
 
-effects(() => {
-  for (const val of arrReactive) {
-    console.log(val)
-  }
-})
+// effects(() => {
+//   for (const val of arrReactive) {
+//     console.log(val)
+//   }
+// })
+//
+// arrReactive[1] = 'bar'
 
-arrReactive[1] = 'bar'
+/**
+ * 6. 组件化
+ *
+ * 预期：
+ * */
