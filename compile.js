@@ -1,5 +1,5 @@
 import { tokenizer } from './parse.js'
 
-const template = '<div>VUE模板</div>'
+const template = '<div><p>Vue</p><p>Template</p></div>'
 
 console.log(tokenizer(template))

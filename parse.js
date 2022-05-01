@@ -73,10 +73,10 @@ export function tokenizer(str) {
             type: 'text',
             content: chars.join('')
           })
+          // chars 消费
+          chars.length = 0
+          str = str.slice(1)
         }
-        // chars 消费
-        chars.length = 0
-        str = str.slice(1)
         break
       case state.tagEnd:
         if (isAlpha(char)) {
@@ -105,4 +105,3 @@ export function tokenizer(str) {
   return tokens
 }
 
-const tokens = tokenizer()
