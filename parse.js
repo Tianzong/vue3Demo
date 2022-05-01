@@ -105,3 +105,45 @@ export function tokenizer(str) {
   return tokens
 }
 
+export function parse(str) {
+  const tokens = tokenizer(str)
+
+  const root = {
+    type: 'Root',
+    children: []
+  }
+
+  const eleStack = [root]
+
+  while (tokens.length) {
+    // 栈顶 为父节点
+    const parent = eleStack[eleStack.length - 1]
+    const t = tokens[0]
+    switch (t.type) {
+      case 'tag':
+        const elementNode = {
+          type: 'Element',
+          tag: t.name,
+          children: []
+        }
+        // 添加到父亲中
+        parent.children.push(elementNode)
+        eleStack.push(elementNode)
+        break
+      case 'text':
+        const textNode = {
+          type: 'Text',
+          content: t.content
+        }
+        parent.children.push(textNode)
+        break
+      case 'tagEnd':
+        eleStack.pop()
+        break
+    }
+    tokens.shift()
+  }
+
+  return root
+}
+
