@@ -1,3 +1,10 @@
+
+const FunctionDeclNode = {
+  type: 'FunctionDecl',
+  id: {
+  }
+}
+
 const state = {
   initial: 1,
   tagOpen: 2,
@@ -9,6 +16,19 @@ const state = {
 
 function isAlpha(char) {
   return char >= 'a' && char <= 'z' || char >= 'A' && char <= 'Z'
+}
+
+function dump(node, index = 0) {
+  const type = node.type
+
+  const desc = type === 'Root' ? ''
+      : type === 'Element' ? 'Element' : 'Text'
+
+  console.log(`${'-'.repeat(index)}${desc}`)
+
+  if (node.children) {
+    node.children.forEach(n => dump(node, index + 2))
+  }
 }
 
 export function tokenizer(str) {
@@ -147,3 +167,55 @@ export function parse(str) {
   return root
 }
 
+function traverseNode(ast, context) {
+  const currentNode = ast
+  const exitFns = []
+
+  const transformers = context.nodeTransforms
+  for (let i = 0; i < transformers.length; i++) {
+    const onExit = transformers[i](currentNode, context)
+    if (onExit) {
+      exitFns.push(onExit)
+    }
+    if (!context.currentNode) return
+  }
+
+  const children = currentNode.children
+  if (children) {
+    for (let i = 0; i < children.length; i++) {
+      context.parent = context.currentNode
+      context.childIndex = i
+      traverseNode(children[i])
+    }
+  }
+
+  // 依次退栈执行回调函数
+  let i = exitFns.length
+  while (i--) {
+    exitFns[i]()
+  }
+}
+
+function transform(ast) {
+  const context = {
+    currentNode: null,
+    // 替换节点 AST -> JS AST
+    replaceNode (node) {
+      context.parent.children[context.childIndex] = ind
+      // 替换为 JS AST
+      context.currentNode = node
+    },
+    nodeTransforms: [
+        transformElement,
+    ]
+  }
+}
+
+function transformElement(ast, context) {
+  //
+
+  // 返回回调函数
+  return () => {
+
+  }
+}
