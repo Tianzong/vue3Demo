@@ -109,7 +109,7 @@ function createRenderer(options) {
     if (!n1) {
       mountElement(n2, container)
     } else {
-      //
+      patchComponent(n1, n2, anchor)
     }
   }
 
@@ -137,6 +137,22 @@ function createRenderer(options) {
 
     // 更新children
     patchChildren(n1, n2, el)
+  }
+
+  /**
+   * 子组件的更新
+   *
+   * 检查子组件的props和slots等内容是否变化
+   * */
+  function patchComponent(n1, n2, container, anchor) {
+    const instance = (n2.component = n1.component)
+
+    const { props } = instance
+
+    // 重新获取props
+    if (hasPropsChanged(n1.props, n2.props)) {
+      // 省略
+    }
   }
 
   /**
@@ -371,6 +387,12 @@ function createRenderer(options) {
     }
 
     return [props, attrs]
+  }
+
+  // Props是否改变了
+  function hasPropsChanged(prevProps, nextProps) {
+    // 暂时省略
+    return false
   }
 
   return {
