@@ -196,7 +196,7 @@ function traverseNode(ast, context) {
   }
 }
 
-function transform(ast) {
+export function transform(ast) {
   const context = {
     currentNode: null,
     // 替换节点 AST -> JS AST
@@ -209,6 +209,93 @@ function transform(ast) {
         transformElement,
     ]
   }
+
+  // 遍历 AST
+  traverseNode(ast, context)
+}
+
+export function generate(node) {
+  const context = {
+    // 最终生成得渲染函数
+    code: '',
+    push (code) {
+      context.code += code
+    }
+  }
+  
+  // 生成代码
+  genNode(node, context)
+  
+  // 返回渲染函数
+  return context.code
+}
+
+// 生成代码 过于复杂 暂时省略 根据JS AST 类型 生成 render函数
+function genNode(node) {
+  switch (node.type) {
+    case '':
+  }
+}
+
+// 字符串字面量 节点
+function createStringLiteral(val) {
+  return {
+    type: 'StringLiteral',
+    val
+  }
+}
+
+// 标识符节点
+function createIdentifier(val) {
+  return {
+    type: 'Identifier',
+    val
+  }
+}
+
+// 数组节点
+function createArray(val) {
+  return {
+    type: 'ArrayExpression',
+    val
+  }
+}
+
+// 函数调用节点
+function createCallExpression(caller, args) {
+  return {
+    type: 'CallExpression',
+    caller: createIdentifier(caller),
+    arguments: args
+  }
+}
+
+function transformText(node) {
+  if (node.type !== 'Text') return
+
+  // js Ast的文本节点就是一个 平平无奇的对象
+  node.jsNode = createStringLiteral(node.content)
+}
+
+function transformElement(node) {
+  // 将转换代码编写在退出阶段的回调函数，保证子节点先处理
+  return () => {
+    if (node.type !== 'Element') {
+      return
+    }
+
+    // 创建 h 函数调用语句
+    const callExp = createCallExpression('h', [
+        createStringLiteral(node.tag)
+    ])
+
+    node.children.length === 1
+      ? callExp.arguments.push(node.children[0].jsNode)
+      : callExp.arguments.push(
+          // 省略
+          []
+        )
+  }
 }
 
 function transformElement(ast, context) {
@@ -219,3 +306,5 @@ function transformElement(ast, context) {
 
   }
 }
+
+
