@@ -30,7 +30,10 @@ function queueJob(job) {
 
 export function mountComponent(vnode, container, anchor) {
   const componentOptions = vnode.type
-  const { render, data } = componentOptions
+  const { render, data, beforeCreated, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions
+
+  // 3. beforeCreated
+  beforeCreated && beforeCreated()
 
   const state =  reactive(data())
 
@@ -44,16 +47,23 @@ export function mountComponent(vnode, container, anchor) {
   // 2. 挂载，用于日后更新
   vnode.component = instance
 
+  // 3. created 声明周期函数
+  created && created()
+
   // 自动更新
   effects(() => {
     // 调用 render 函数的时候， 将其this设置为state。
     // 此时，函数内部可以通过this访问data
     const subTree = render.call(state, state)
     if (!instance.isMounted) {
+      beforeMount && beforeMount()
       patch(null, subTree, container, anchor)
+      mounted && mounted()
       instance.isMounted = true
     } else {
+      beforeUpdate && beforeUpdate()
       patch(instance.subTree, subTree, container, anchor)
+      updated && updated()
     }
     instance.subTree = subTree
   }, {
