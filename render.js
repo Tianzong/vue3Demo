@@ -1,4 +1,4 @@
-import { reactive } from './reactive.js'
+import { reactive, shallowReadonly } from './reactive.js'
 import { effects } from './effects.js'
 
 const options = {
@@ -288,14 +288,14 @@ function createRenderer(options) {
   /**
    * 挂载组件. 同时添加声明周期函数
    * */
-  function mountComponent(vnode, container, anchor) {
+  function mountComponent(vnode, container, anchor, setup) {
     const componentOptions = vnode.type
     const { render, data, props: propsOptions, beforeCreated, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions
 
     // 3. beforeCreated
     beforeCreated && beforeCreated()
 
-    const state =  reactive(data())
+    const state = data ? reactive(data) : null
 
     // 完善声明周期
     // 1. 组件实例
@@ -305,6 +305,15 @@ function createRenderer(options) {
       isMounted: false,
       subTree: null
     }
+
+    // setUp 组件定义的函数，
+    const setupContext = setup(shallowReadonly(instance.props), setupContext)
+
+    // 对 setUp context 进行代理
+    const renderContext = new Proxy(instance, {
+        // 省略
+    })
+
     // 2. 挂载，用于日后更新
     vnode.component = instance
 

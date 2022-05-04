@@ -69,3 +69,8 @@ export function reactive(obj, isShallow = false) {
   })
 }
 
+// 暂时省略
+export function shallowReadonly(obj) {
+
+}
+
