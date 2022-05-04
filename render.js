@@ -1,5 +1,5 @@
-import { patch } from "./patch.js";
-import { mountComponent } from './component.js'
+import { reactive } from './reactive.js'
+import { effects } from './effects.js'
 
 const options = {
   // 用于创建元素
@@ -16,8 +16,34 @@ const options = {
   }
 }
 
-function createRenderer(options) {
+// 任务缓存队列
+const queue = new Set()
+// 队列是否正在刷新
+let isFlushing = false
+// 为了生成一个微队列
+const p = Promise.resolve()
 
+function queueJob(job) {
+  // 添加到队列
+  queue.add(job)
+  //
+  if (!isFlushing) {
+    // 避免重复刷新 ?? 为什么会重复刷新？
+    isFlushing = true
+    p.then(() => {
+      try {
+        queue.forEach(job => job())
+      } finally {
+        // 重置状态
+        isFlushing = false
+        queue.length = 0
+      }
+    })
+  }
+}
+
+
+function createRenderer(options) {
   const {
     createElement,
     setElementText,
@@ -38,23 +64,20 @@ function createRenderer(options) {
     container._vnode = vnode
   }
 
-  // 封装卸载操作。可用于钩子函数的监听
-  function unmount(vnode) {
-    const parent = vnode.el.parentNode
-    if (parent) {
-      parent.removeChild(vnode.el)
-    }
-  }
-
+  /**
+   * 核心函数， ”打补丁“
+   *
+   * 比较新旧两个组件Vnode之间得不同，进行局部更新
+   * */
   function patch(n1, n2, container, anchor) {
     // 不同类型，先卸载旧的
     if (n1 && n1.type !== n2.type) {
       unmount(n1)
       n1 = null
     }
-    
+
     const { type } = n2
-    
+
     // string 代表普通标签
     if (typeof type === 'string') {
       if (!n1) {
@@ -64,7 +87,11 @@ function createRenderer(options) {
       }
     } else if (type === 'object') {
       // 组件类型
-      mountComponent()
+      if (!n1) {
+        mountComponent()
+      } else {
+        patchComponent()
+      }
     } else if (type === Text) {
       // 文本类型
       // 如果没有旧节点，直接挂载
@@ -86,9 +113,12 @@ function createRenderer(options) {
     }
   }
 
-  // 毕竟两个元素，更新
+  /**
+   * 对元素类型 打补丁
+   *
+   * 先 对props打补丁。 再对元素的孩子打补丁
+   * */
   function patchElement(n1, n2) {
-    // ??
     const el = n2.el = n1.el
     const oldProps = n1.props
     const newProps = n2.props
@@ -109,6 +139,11 @@ function createRenderer(options) {
     patchChildren(n1, n2, el)
   }
 
+  /**
+   * 对两个Vnode的孩子进行打补丁
+   *
+   * 本质上是对两个数组的Vnode进行打补丁
+   * */
   function patchChildren(n1, n2, container) {
     // 新节点是 文本标签
     if (typeof n2.children === 'string') {
@@ -201,29 +236,9 @@ function createRenderer(options) {
     }
   }
 
-  function mountElement(vnode, container, anchor) {
-    const el = createElement(vnode.type)
-
-    // 孩子节点处理
-    if (typeof vnode.children === 'string') {
-      setElementText(el, vnode.children)
-    } else if (Array.isArray(vnode)) {
-      vnode.children.forEach(child => {
-        // 挂载阶段，没有旧vnode
-        patch(null, child, el)
-      })
-    }
-
-    if (vnode.props) {
-      for (const key in vnode.props) {
-        patchProps(el, key, null, vnode.props[key])
-      }
-    }
-
-    // 元素挂载到容器里
-    insert(el, container)
-  }
-
+  /**
+   * 对 props 打补丁
+   * */
   function patchProps(el, key, prevValue, nextValue) {
     // 如果是事件监听器
     if (/^on/.test(key)) {
@@ -254,12 +269,108 @@ function createRenderer(options) {
     }
   }
 
+  /**
+   * 挂载组件. 同时添加声明周期函数
+   * */
+  function mountComponent(vnode, container, anchor) {
+    const componentOptions = vnode.type
+    const { render, data, props: propsOptions, beforeCreated, created, beforeMount, mounted, beforeUpdate, updated } = componentOptions
+
+    // 3. beforeCreated
+    beforeCreated && beforeCreated()
+
+    const state =  reactive(data())
+
+    // 完善声明周期
+    // 1. 组件实例
+    const instance = {
+      state,
+      // props: shallowReactive(props) 暂时省略
+      isMounted: false,
+      subTree: null
+    }
+    // 2. 挂载，用于日后更新
+    vnode.component = instance
+
+    // 3. created 声明周期函数
+    created && created()
+
+    // 自动更新
+    effects(() => {
+      // 调用 render 函数的时候， 将其this设置为state。
+      // 此时，函数内部可以通过this访问data
+      const subTree = render.call(state, state)
+      if (!instance.isMounted) {
+        beforeMount && beforeMount()
+        patch(null, subTree, container, anchor)
+        mounted && mounted()
+        instance.isMounted = true
+      } else {
+        beforeUpdate && beforeUpdate()
+        patch(instance.subTree, subTree, container, anchor)
+        updated && updated()
+      }
+      instance.subTree = subTree
+    }, {
+      scheduler: queueJob
+    })
+  }
+
+  /** 挂载元素 本质上，这是patch算法的归宿，组件只是对Element的抽象 */
+  function mountElement(vnode, container, anchor) {
+    const el = createElement(vnode.type)
+
+    // 孩子节点处理
+    if (typeof vnode.children === 'string') {
+      setElementText(el, vnode.children)
+    } else if (Array.isArray(vnode)) {
+      vnode.children.forEach(child => {
+        // 挂载阶段，没有旧vnode
+        patch(null, child, el)
+      })
+    }
+
+    if (vnode.props) {
+      for (const key in vnode.props) {
+        patchProps(el, key, null, vnode.props[key])
+      }
+    }
+
+    // 元素挂载到容器里
+    insert(el, container)
+  }
+
+  // 封装卸载操作。可用于钩子函数的监听
+  function unmount(vnode) {
+    const parent = vnode.el.parentNode
+    if (parent) {
+      parent.removeChild(vnode.el)
+    }
+  }
+
   // 是否支持设置props。
   function shouldSetAsProps(el, key, value) {
     // 特殊处理
     if (key === 'form' && el.tagName === 'INPUT') return false
 
     return key in el
+  }
+
+  // 用于解析组建的 props 和 attrs 数据
+  function resolveProps(options, propsData) {
+    const props = {}
+    const attrs = {}
+
+    for (const key in propsData) {
+      if (key in options) {
+        // 如果当前组件定义了 这个props 作为props 否则作为 attrs
+        props[key] = propsData[key]
+      } else {
+        attrs[key] = propsData[key]
+      }
+    }
+
+    return [props, attrs]
   }
 
   return {
