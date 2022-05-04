@@ -34,14 +34,30 @@ export function mountComponent(vnode, container, anchor) {
 
   const state =  reactive(data())
 
+  // 完善声明周期
+  // 1. 组件实例
+  const instance = {
+    state,
+    isMounted: false,
+    subTree: null
+  }
+  // 2. 挂载，用于日后更新
+  vnode.component = instance
+
   // 自动更新
   effects(() => {
     // 调用 render 函数的时候， 将其this设置为state。
     // 此时，函数内部可以通过this访问data
     const subTree = render.call(state, state)
-    patch(null, subTree, container, anchor)
+    if (!instance.isMounted) {
+      patch(null, subTree, container, anchor)
+      instance.isMounted = true
+    } else {
+      patch(instance.subTree, subTree, container, anchor)
+    }
+    instance.subTree = subTree
   }, {
-    scheduler: queue
+    scheduler: queueJob
   })
 }
 
