@@ -320,6 +320,8 @@ function createRenderer(options) {
     // 3. created 声明周期函数
     created && created()
 
+    // 4 账号更新测试
+
     // 自动更新
     effects(() => {
       // 调用 render 函数的时候， 将其this设置为state。
